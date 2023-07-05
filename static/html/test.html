@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+    <header>
+        <script src="../plugin/konva.min.js"></script>
+    </header>
+<body>
+<div id="container"></div>
+    <script>
+
+      var delta_x = 200
+      var delta_y = 160
+
+      var ML_NN = [3,3,4,4,1]
+
+      var width = window.innerWidth;
+      var height = window.innerHeight;
+
+      var stage = new Konva.Stage({
+        container: 'container',
+        width: width,
+        height: height,
+      });
+
+      function writeMessage(message) {
+        text.text(message);
+      }
+
+      class layerNN{
+        constructor(n,m,x_off,y_off){
+            this._group = new Konva.Group();
+            this._nets = []
+            for(let i = 0 ; i < n ; i++){
+                let _net_fig = new Konva.Circle({
+                    x: 0+x_off,
+                    y: y_off+(delta_y)*i,
+                    radius: 40,
+                    fill: 'red',
+                    stroke: 'black',
+                    strokeWidth: 4,
+                });
+                this._nets.push(_net_fig)
+                this._group.add(_net_fig)
+            }
+        }
+
+        applyStyle(i){
+            const fill = ["#FFA400","#80BC00","#FF414E"]
+            const strokeWidth = [ 1, 1, 1]
+            this._nets.forEach(net=>{
+                if(i>=0 && i<=2){
+                    net.setFill(fill[i])
+                    net.setStrokeWidth(strokeWidth[i])
+                }
+            })
+        }
+      }
+      
+      var layer = new Konva.Layer();
+
+      LayerList = []
+      max_nn = Math.max(...ML_NN)
+      for(let i = 0 ; i < ML_NN.length ; i++){
+        let _n = ML_NN[i];
+        cur_layer = new layerNN(_n,2,100+i*delta_x,100+delta_y*(max_nn-_n)/2  )
+        cur_layer.applyStyle(1)
+        LayerList.push(cur_layer)
+        layer.add(cur_layer._group)
+      }
+
+      LayerList.at(0).applyStyle(0)
+      LayerList.at(-1).applyStyle(2)
+
+      var lines = new Konva.Group();
+      for(let i = 1 ; i < ML_NN.length ; i++){
+        var l0 = LayerList[i-1]
+        var l1 = LayerList[i]
+
+        l0._nets.forEach(_n0=>{
+            l1._nets.forEach(_n1=>{
+                var ln_01 = new Konva.Line({
+                    points: [_n0.x(),_n0.y(),_n1.x(),_n1.y()],
+                    stroke: 'black',
+                    strokeWidth: 2
+                });
+                lines.add(ln_01)
+            })
+        })
+      }
+      
+      layer.add(lines)
+      lines.setZIndex(0)
+
+      var text = new Konva.Text({
+        x: 10,
+        y: 10,
+        fontFamily: 'Calibri',
+        fontSize: 24,
+        text: 'LOG',
+        fill: 'black',
+      });
+
+
+      layer.add(text);
+
+      stage.add(layer);
+      
+    </script>
+
+</body>
+</html>
