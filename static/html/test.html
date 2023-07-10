@@ -1,20 +1,31 @@
 <!DOCTYPE html>
 <html>
     <header>
-        <script src="../plugin/konva.min.js"></script>
+        <script src="../plugin/konva/konva.min.js"></script>
+        <script src="../plugin/math/math.js"></script>
 
         <link rel="stylesheet" href="../plugin/katex/katex.min.css">
         <script defer src="../plugin/katex/katex.min.js"></script>
         <script defer src="../plugin/katex/contrib/auto-render.min.js"></script>
-        <script defer src="../js/learNN_defs.js"></script>
+        <script src="../js/learNN_defs.js"></script>
         <script defer src="../js/learNN.js"></script>
     </header>
 <body>
+
+
+<input type="range" min="50" max="300" value="200" onchange="_style.margin.nn_x = this.value">
+<input type="range" min="50" max="300" value="160" onchange="_style.margin.nn_y = this.value">
+
 <div id="container"></div>
 <span id="latex_1">...</span>
+<br>
+<br>
 <span id="latex_2">...</span>
   
   
+<script>
+  
+</script>
 
 </body>
 </html>
