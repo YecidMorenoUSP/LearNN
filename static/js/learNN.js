@@ -82,8 +82,8 @@ class nn_layer{
         this.net_in  = math.zeros(1,n)
         this.net_out = math.zeros(1,m)
         this.W_line = math.zeros(n,m)
-        this.y_1 = math.matrix(math.zeros(m,1))
-        this.x_1 = math.matrix(math.zeros(n,1))
+        this.y_1 = math.matrix(math.zeros(1,m))
+        this.x_1 = math.matrix(math.zeros(1,n))
     }
 
     y(x){
@@ -110,15 +110,16 @@ class nn_graph{
         }
 
 
+        this.steps.push([0,-1,-1])
         for(let i = 0 ; i < ML_NN.length-1 ; i++){
-            this.steps.push([i,-1,-1])
+            this.steps.push([i,-1,-1,"ff"])
             for(let n0 = 0 ; n0 < ML_NN[i] ; n0++){
                 for(let n1 = 0 ; n1 < ML_NN[i+1] ; n1++){
-                    this.steps.push([i,n0,n1])
+                    this.steps.push([i,n0,n1,"ff"])
                 }
             }
         }
-        this.steps.push([ML_NN.length-1,-1,-1])
+        this.steps.push([ML_NN.length-1,-1,-1,"ff"])
         
         
     }
@@ -131,6 +132,8 @@ class nn_graph{
 
         this.X = X
         var x_in = X
+        this.layer[0].x_1 = X
+        return
         for(let i = 0 ; i < this.layer.length ; i++){
             x_in = this.layer[i].y(x_in)
         }
@@ -321,8 +324,6 @@ _style.margin = new Proxy(_style.margin, {
     }
 });
 
-NN.predict(math.matrix([1,2,3]))
-
 function net_setText(NN=NN,layer=0,net=0){
     var obj
     var value = "0"
@@ -343,39 +344,96 @@ function net_setText(NN=NN,layer=0,net=0){
 
 net_setText(NN,NN.Z-1,0)
 
+
+
 for(let i = 0 ; i < NN.layer.length ; i++){
     for(let j = 0 ; j < NN.layer[i].m ; j++){
         net_setText(NN,i,j)
     }
 }
 
-latexW = ""
-latexY = ""
 
-for(let i = 0 ; i < NN.layer.length ; i++){
-    latexW += `W^{${i}} = ` + matrix2Latex(NN.layer[i].W,3) + " ~ , ~ "
-    latexY += `X^{${i}} = ` + matrix2Latex(NN.layer[i].x_1,3) + " ~ , ~ "
+
+
+function clearNN_data(){
+    for(let i = 0 ; i < NN.layer.length ; i++){
+        NN.layer[i].x_1.forEach(function (value, index, matrix) {
+            matrix.set(index,0)
+        }) 
+        NN.layer[i].y_1.forEach(function (value, index, matrix) {
+            matrix.set(index,0)
+        }) 
+    }
+    
 }
-latexY += `Y^{out}` + matrix2Latex(NN.layer[NN.layer.length-1].y_1,3) + " ~ , ~ "
 
-katex.render(latexW, _UI.latex_1, {
-    throwOnError: false
-});
+clearNN_data()
 
-katex.render(latexY, _UI.latex_2, {
-    throwOnError: false
-});
+function renderEquations(){
+    latexW = ""
+    latexY = ""
+
+    for(let i = 0 ; i < NN.layer.length ; i++){
+        latexW += `W^{${i}} = ` + matrix2Latex(NN.layer[i].W,3) + " ~ , ~ "
+        latexY += `X^{${i}} = ` + matrix2Latex(NN.layer[i].x_1,3) + " ~ , ~ "
+    }
+    latexY += `Y^{out}` + matrix2Latex(NN.layer[NN.layer.length-1].y_1,3) + " ~ , ~ "
+
+    katex.render(latexW, _UI.latex_1, {
+        throwOnError: false
+    });
+
+    katex.render(latexY, _UI.latex_2, {
+        throwOnError: false
+    });
+}
+
+renderEquations();
+
 
 function ExecuteOnce(step=0){
+    if(step==1){
+        NN.predict(math.matrix([1,2,3]))
+        console.log("NN.predict(math.matrix([1,2,3]))")
+    }
     if(step>=0 && step<NN.steps.length){        
-        
+        // layer net_0 net_1 type
         var sd = NN.steps[step]
 
         if(sd[1]!=-1){
+            
+            if(sd[3] == "ff"){
+                var w = NN.layer[sd[0]].W.get([sd[1],sd[2]])
+                var x = NN.layer[sd[0]].x_1.get([0,sd[1]])
+                var c = NN.layer[sd[0]].y_1.get([0,sd[2]])
+
+                NN.layer[sd[0]].y_1.set([0,sd[2]],c+w*x)
+
+                if(sd[0]+1 != NN.layer.length){
+                    NN.layer[sd[0]+1].x_1._data = NN.layer[sd[0]].y_1._data
+                    net_setText(NN,sd[0]+1,sd[2])
+                }
+                    
+
+            }
+
             NN.layer[sd[0]].W_line.get([sd[1],sd[2]]).setStrokeWidth(_style.width.line_focus);
+
+        }else{
+            
+            if(sd[0]<NN.layer.length)
+                for(let i = 0 ; i < NN.layer[sd[0]].m ; i++)
+                    net_setText(NN,sd[0],i)
+            else
+                for(let i = 0 ; i < NN.layer[sd[0]-1].n ; i++)
+                    net_setText(NN,sd[0],i)
         }
 
+
+
+        renderEquations();
         setTimeout(function(){
+            
             if(sd[1]!=-1){
                 NN.layer[sd[0]].W_line.get([sd[1],sd[2]]).setStrokeWidth(_style.width.line_unfocus);
             }

@@ -17,8 +17,8 @@ _style = {
         nn_y:160,
     },
     time:{
-        dt_step: 500,
-        dt_all_step: 1000,
+        dt_step: 100,
+        dt_all_step: 200,
     }
 }
 
