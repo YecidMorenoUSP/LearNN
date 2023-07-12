@@ -19,6 +19,11 @@ _style = {
     time:{
         dt_step: 100,
         dt_all_step: 200,
+    },
+    line:{
+        ff_focus:{
+            
+        }
     }
 }
 
@@ -83,6 +88,7 @@ function matrix2Latex(M,fixed=-1){
 async function sleep_ms(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
+
 
 String.prototype.format = function () {
     var args = arguments;

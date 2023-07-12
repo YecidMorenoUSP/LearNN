@@ -8,25 +8,50 @@
         <link rel="stylesheet" href="../plugin/katex/katex.min.css">
         <script defer src="../plugin/katex/katex.min.js"></script>
         <script defer src="../plugin/katex/contrib/auto-render.min.js"></script>
-        <script src="../js/learNN_defs.js"></script>
-        <script defer src="../js/learNN.js"></script>
+        <!-- <script src="../js/learNN_defs.js"></script> -->
+        <!-- <script defer src="../js/learNN.js"></script> -->
+        
     </header>
 <body>
 
 
-<input type="range" min="50" max="300" value="200" onchange="_style.margin.nn_x = this.value">
-<input type="range" min="50" max="300" value="160" onchange="_style.margin.nn_y = this.value">
+<div>
+    <input type="range" id="sb_margin_nn_x" min="50" max="300" value="0" onchange="_style.margin.nn_x = this.value ; UI_update_nodes()">
+    <input type="range" id="sb_margin_nn_y" min="50" max="300" value="0" onchange="_style.margin.nn_y = this.value ; UI_update_nodes()">
+    <input type="text"  id="tb_vec_in" onchange="_nn.vec_in = JSON.parse('[' + this.value + ']')" 
+        pattern="^\s*-?\d+(\s*,\s*-?\d+)*\s*$"
+        oninput="this.reportValidity()"
+        id="tb_vec_in">
+    <input type="button" value="GO" onclick="GO_callback()">
+</div>
+<div>
+    <input type="button" value="cls">
+    <input type="button" value="<">
+    <input type="button" value="Play">
+    <input type="button" value=">">
+    Step <span>0</span> of <span>0</span>
+</div>
 
-<div id="container"></div>
-<span id="latex_1">...</span>
-<br>
-<br>
-<span id="latex_2">...</span>
+<div id="nn_render_container"></div>
+
+<div id="latex_container">
+    <span id="latex_1">...</span>
+    <br>
+    <br>
+    <span id="latex_2">...</span>
+</div>
+
+
   
-  
+<script src="../plugin/learnNN/learNN_defs.js"></script>
 <script>
-  
+    document.addEventListener("DOMContentLoaded", () => {
+        document.querySelector("#tb_vec_in").value = _nn.vec_in;
+        document.querySelector("#sb_margin_nn_x").value = _style.margin.nn_x;
+        document.querySelector("#sb_margin_nn_y").value = _style.margin.nn_y;
+    });
 </script>
+<script src="../plugin/learnNN/learNN.js"></script>
 
 </body>
 </html>

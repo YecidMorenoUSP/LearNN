@@ -104,6 +104,9 @@ class nn_graph{
         this.X = math.ones([1,this.N])
         this.layer = []
         this.steps = []
+        this.step_data = []
+
+        var step_template = {l:0,n0:0,n1:0,type:"ff",visited:false}
 
         for(let i = 0 ; i < ML_NN.length-1 ; i++){
             this.layer.push( new nn_layer(ML_NN[i],ML_NN[i+1]) )
@@ -111,16 +114,29 @@ class nn_graph{
 
 
         this.steps.push([0,-1,-1])
+        this.step_data.push({l:0,n0:-1,n1:-1,type:"ff",visited:false})
+
         for(let i = 0 ; i < ML_NN.length-1 ; i++){
             this.steps.push([i,-1,-1,"ff"])
+            this.step_data.push({l:i,n0:-1,n1:-1,type:"ff",visited:false})
             for(let n0 = 0 ; n0 < ML_NN[i] ; n0++){
                 for(let n1 = 0 ; n1 < ML_NN[i+1] ; n1++){
                     this.steps.push([i,n0,n1,"ff"])
+                    this.step_data.push({l:i,n0:n0,n1:n1,type:"ff",visited:false})
                 }
             }
         }
-        this.steps.push([ML_NN.length-1,-1,-1,"ff"])
+
+        this.steps.push([ML_NN.length-  1,-1,-1,"ff"])
+        this.step_data.push({l:ML_NN.length-1,n0:-1,n1:-1,type:"ff",visited:false})
+
+        this.step_data.push({l:ML_NN.length-1,n0:-1,n1:-1,type:"pp",visited:false})
         
+        for(let i = (this.step_data.length-2) ; i > 0 ; i-- ){
+            this.step_data.push(Object.assign({},this.step_data[i]))
+            this.step_data.at(-1).type = "fb"
+        }
+
         
     }
 
@@ -303,7 +319,7 @@ _events = new Proxy(_events, {
             
         }else if(key == "STEP"){
             // _events.RUN = true
-            if(value>=0 && value < NN.steps.length){
+            if(value>=0 && value < NN.step_data.length){
                 target[key] = value;
             }            
             ExecuteOnce(_events.STEP);
@@ -353,8 +369,6 @@ for(let i = 0 ; i < NN.layer.length ; i++){
 }
 
 
-
-
 function clearNN_data(){
     for(let i = 0 ; i < NN.layer.length ; i++){
         NN.layer[i].x_1.forEach(function (value, index, matrix) {
@@ -366,6 +380,7 @@ function clearNN_data(){
     }
     
 }
+
 
 clearNN_data()
 
@@ -393,40 +408,42 @@ renderEquations();
 
 function ExecuteOnce(step=0){
     if(step==1){
+        clearNN_data()
         NN.predict(math.matrix([1,2,3]))
-        console.log("NN.predict(math.matrix([1,2,3]))")
+        console.log("First predict")
     }
-    if(step>=0 && step<NN.steps.length){        
-        // layer net_0 net_1 type
-        var sd = NN.steps[step]
+    if(step>=0 && step<NN.step_data.length){        
+        
+        var sd0 = NN.step_data[step]
+        
 
-        if(sd[1]!=-1){
+        if(sd0.n0!=-1){
             
-            if(sd[3] == "ff"){
-                var w = NN.layer[sd[0]].W.get([sd[1],sd[2]])
-                var x = NN.layer[sd[0]].x_1.get([0,sd[1]])
-                var c = NN.layer[sd[0]].y_1.get([0,sd[2]])
+            if(sd0.type == "ff"){
+                var w = NN.layer[sd0.l].W.get([sd0.n0,sd0.n1])
+                var x = NN.layer[sd0.l].x_1.get([0,sd0.n0])
+                var c = NN.layer[sd0.l].y_1.get([0,sd0.n1])
 
-                NN.layer[sd[0]].y_1.set([0,sd[2]],c+w*x)
+                NN.layer[sd0.l].y_1.set([0,sd0.n1],c+w*x)
 
-                if(sd[0]+1 != NN.layer.length){
-                    NN.layer[sd[0]+1].x_1._data = NN.layer[sd[0]].y_1._data
-                    net_setText(NN,sd[0]+1,sd[2])
+                if(sd0.l+1 != NN.layer.length){
+                    NN.layer[sd0.l+1].x_1._data = NN.layer[sd0.l].y_1._data
+                    net_setText(NN,sd0.l+1,sd0.n1)
                 }
                     
 
             }
 
-            NN.layer[sd[0]].W_line.get([sd[1],sd[2]]).setStrokeWidth(_style.width.line_focus);
+            NN.layer[sd0.l].W_line.get([sd0.n0,sd0.n1]).setStrokeWidth(_style.width.line_focus);
 
         }else{
             
-            if(sd[0]<NN.layer.length)
-                for(let i = 0 ; i < NN.layer[sd[0]].m ; i++)
-                    net_setText(NN,sd[0],i)
+            if(sd0.l<NN.layer.length)
+                for(let i = 0 ; i < NN.layer[sd0.l].m ; i++)
+                    net_setText(NN,sd0.l,i)
             else
-                for(let i = 0 ; i < NN.layer[sd[0]-1].n ; i++)
-                    net_setText(NN,sd[0],i)
+                for(let i = 0 ; i < NN.layer[sd0.l-1].n ; i++)
+                    net_setText(NN,sd0.l,i)
         }
 
 
@@ -434,8 +451,8 @@ function ExecuteOnce(step=0){
         renderEquations();
         setTimeout(function(){
             
-            if(sd[1]!=-1){
-                NN.layer[sd[0]].W_line.get([sd[1],sd[2]]).setStrokeWidth(_style.width.line_unfocus);
+            if(sd0.n0!=-1){
+                NN.layer[sd0.l].W_line.get([sd0.n0,sd0.n1]).setStrokeWidth(_style.width.line_unfocus);
             }
         },_style.time.dt_step)
 
@@ -447,7 +464,7 @@ function ExecuteOnce(step=0){
 function ExecuteAll(step=0){
     
     if(!_events.RUN) return;
-    if(step<NN.steps.length){        
+    if(step<NN.step_data.length){        
         
         _events.STEP = step;
         
