@@ -12,8 +12,8 @@ _style = {
     stage:{
         Self:{draggable:false},
         const:{scaleBy:0},
-        Self:{draggable:true},
-        const:{scaleBy:1.2},
+        // Self:{draggable:true},
+        // const:{scaleBy:1.2},
     },
     width:{
         line:2,
@@ -27,17 +27,17 @@ _style = {
         nn_y:160,
     },
     time:{
-        dt_step: 500
+        dt_step: 100
     },
     neuron:{
-        draggable:true
+        // draggable:true
     },
     line:{
         Self:{stroke: '#CCC',strokeWidth: 5},
         _Tween:{duration: .5},
     },
     line_focus:{
-        Self:{stroke: '#000',strokeWidth: 10},
+        Self:{stroke: '#000',strokeWidth: 8},
         _Tween:{duration: .5}
     },
     line_ff:{
@@ -50,27 +50,28 @@ _style = {
     },
     layer_in:{
         Text:{fill:"#FFF"},
-        Circle:{fill:"#FFA400",stroke:"black",strokeWidth:"2"}
+        Circle:{fill:"#FFA400",stroke:"#CCC",strokeWidth:"2"},
     },
     layer_hidden:{
         Text:{fill:"#FFF"},
-        Circle:{fill:"#80BC00",stroke:"black",strokeWidth:"2"},
+        Circle:{fill:"#80BC00",stroke:"#CCC",strokeWidth:"2"},
     },
     layer_out:{
         Text:{fill:"#FFF"},
-        Circle:{fill:"#FF414E",stroke:"black",strokeWidth:"2"}
+        Circle:{fill:"#FF414E",stroke:"#CCC",strokeWidth:"2"},
     },
     latex_anim:{
         ff:['\\color{green}  (',')'],
         fb:['\\color{orange} (',')'],
+        ff_layer:[]
     }
 }
 _nn = {
-    vec_in : [3,2,2,1]
+    vec_in : [3,2,2,1],
+    x0: [1,2,3]
 }
 
 _events = {}
-
 
 //#####################################
 //            Prototypes
@@ -82,7 +83,6 @@ math.Matrix.prototype.toFixed = function(n){
     })
     return this
 }
-
 
 //#####################################
 //            UI
@@ -220,7 +220,6 @@ function UI_drawNN(_ui=_UI,NN=_node.NN){
                 line.on("mouseover",function(e){
                     UI_setStyle(e.currentTarget,_style.line_focus)
                     UI_renderEquations(_ui,{n0:m,n1:n,l:l,type:'ff'})
-                    console.log(NN.layer[data_line.l].W.get([m,n]))
                 })
 
                 line.on("mouseout",function(e){
@@ -313,13 +312,30 @@ function UI_createUI(){
     _ui.layer = layer
 
     _ui.stage.add(_ui.layer)
-    UI_setUI(_ui)
+    UI_getUI(_ui)
+
     return _ui
 }
 
-function UI_setUI(_ui=_UI){
+function UI_getUI(_ui=_UI){
     _ui.latex_1 = document.querySelector("#latex_1")
     _ui.latex_2 = document.querySelector("#latex_2")
+    _ui.latex_3 = document.querySelector("#latex_3")
+    _ui.n_step = document.querySelector("#n_step")
+    _ui.LOG = document.querySelector("#LOG")
+    document.querySelector("#btn_cls").onclick = ()=>{
+        UI_animate(0)
+    }
+    document.querySelector("#btn_next").onclick = ()=>{
+        UI_animate(_nn.step_cur+1)
+    }
+    document.querySelector("#btn_back").onclick = ()=>{
+        UI_animate(_nn.step_cur-1)
+    }
+}
+
+function UI_setUI(_ui=_UI){
+    _ui.n_step.innerHTML = _nn.step_cur+" of "+(_nn.steps.length-1)
 }
 
 function UI_renderEquations(_ui=_UI,s){
@@ -344,6 +360,10 @@ function UI_renderEquations(_ui=_UI,s){
             style = [[0, s.n1,..._style.latex_anim[s.type]]]
         }
         latexY += `Y^{${i}} = ` + matrix2Latex(NN.layer[i].y_1,3,style) + " ~ , ~ "
+
+        latexW += "\\\\"
+        latexX += "\\\\"
+        latexY += "\\\\"
     }
     // latexY += `Y^{out}` + matrix2Latex(NN.layer[NN.layer.length-1].y_1,3) + " ~ , ~ "
 
@@ -351,7 +371,81 @@ function UI_renderEquations(_ui=_UI,s){
         throwOnError: false
     });
 
-    katex.render(latexX+"\\\\"+latexY, _UI.latex_2, {
+    katex.render(latexX, _UI.latex_2, {
         throwOnError: false
     });
+
+    katex.render(latexY, _UI.latex_3, {
+        throwOnError: false
+    });
+}
+
+function UI_tween_multiple(node,style=[],save=[],idx=0){
+    if(node==undefined) return
+    if(style.length==0) return
+
+    var tam = save.length
+    var sl = style.length
+
+    if(idx==sl) return
+
+    save.push(new Konva.Tween({...{node:node},
+        ...style[idx],
+        onFinish:function(){
+            UI_tween_multiple(node,style,save,idx+1)        
+        }}))
+
+    save.at(-1).play()
+    
+}
+
+function UI_addLOG(txt=undefined){
+    if(txt) _ui.LOG.innerHTML += txt;
+    else _ui.LOG.innerHTML = ""
+}
+
+//#####################################
+//            Latex
+//#####################################
+
+function matrix2Latex(M,fixed=-1,item=[]){
+    var txt_in = ""
+    var m,n
+    
+    m = M._size[0]
+    n = M._size[1]
+    var to_add = ""
+    for(var f = 0 ; f < m ; f++){
+        for(var c = 0 ; c < n ; c++){
+            
+            to_add = ""
+            
+            if(fixed==-1){
+                to_add += M._data[f][c]
+            }else{
+                to_add += parseFloat(M._data[f][c]).toFixed(fixed)
+            }
+
+            if(item){
+                item.forEach((i)=>{
+                    if(i[0]==f && i[1]==c){
+                        to_add = `${i[2]}{${to_add}}${i[3]}`
+                    }else{
+                        to_add = `~~{${to_add}}~~`
+                    }
+                })
+            }
+
+            txt_in += to_add
+
+            if((c+1)!=n){
+                txt_in += "&"    
+            }
+        }
+        if((f+1)!=m){
+            txt_in += "\\\\"
+        }
+    }
+
+    return `\\begin{bmatrix}${txt_in}\\end{bmatrix}`
 }

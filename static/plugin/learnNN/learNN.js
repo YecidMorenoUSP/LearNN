@@ -76,19 +76,31 @@ class NeuronalNetwork{
     }
 
     clear(){
-        
+        for(let l = 0 ; l <= this.Z ; l++){
+            this.layer[l].y_1.map((v,i,m)=>{
+                m.set(i,0)
+            })
+            this.layer[l].x_1.map((v,i,m)=>{
+                m.set(i,0)
+            })
+        }
     }
 
 }
 
-function make_steps(_nn){
+function NN_make_steps(_nn){
 
     _nn.steps = []
     NN = _nn.NN
    
+    _nn.step_cur = 0
+
     _nn.steps.push({l:0,n0:0,n1:0,type:"_init",visited:false})
 
+    _nn.steps.push({l:0,n0:0,n1:0,type:"ff_init",visited:false})
+
     for(let l=1 ; l <= NN.Z ; l++){
+        _nn.steps.push({l:l,n0:0,n1:0,type:"ff_layer",visited:false})
         for(let n=0 ; n < NN.layer[l].n ; n++){
             for(let m=0 ; m < NN.layer[l].m ; m++){
                 let s = {l:l,n0:m,n1:n,type:"ff",visited:false}
@@ -113,44 +125,28 @@ function make_steps(_nn){
 
 function GO_callback(){
     _nn.NN = new NeuronalNetwork(_nn.vec_in)
-    make_steps(_nn)
-    NN.predict(math.matrix([1,2,3]))
+    NN_make_steps(_nn)
 
     UI_drawNN(_UI,_nn.NN)
     UI_updateNodes(_ui)
     UI_renderEquations(_ui)
 }
 
-function UI_tween_multiple(node,style=[],save=[],idx=0){
-    if(node==undefined) return
-    if(style.length==0) return
 
-    var tam = save.length
-    var sl = style.length
-
-    if(idx==sl) return
-
-    save.push(new Konva.Tween({...{node:node},
-        ...style[idx],
-        onFinish:function(){
-            UI_tween_multiple(node,style,save,idx+1)        
-        }}))
-
-    save.at(-1).play()
-    
-}
 
 function runLine(l){
     var lt=_ui.tweens_line[_ui.lines[l].line._id]
     return lt
 }
 
-function UI_animate(step=0){
+function UI_animate(step=0,continuios=false){
     _ui = _UI
     NN = _nn.NN
+    _nn.step_cur = step
+
     if(step>=0 && step<_nn.steps.length){
         var s = _nn.steps[step];
-        console.log(s)
+        // console.log(s)
         let line = undefined
         
         if(s.type == "ff" || s.type == "fb"){
@@ -160,7 +156,20 @@ function UI_animate(step=0){
             })
         }
         
-        if(s.type == "ff"){    
+        if(s.type == "_init"){
+            UI_addLOG()
+            NN_make_steps(_nn)
+            UI_addLOG("Limpando variaveis para inicio da execução <br><br>");
+            NN.clear()
+            UI_addLOG("Definindo entrada da rede "+
+            katex.renderToString("X_0 = "+matrix2Latex(math.matrix([_nn.x0]),2))
+            +"<br><br>");
+            NN.predict(math.matrix(_nn.x0))
+        }else if(s.type == "ff_layer"){
+            UI_addLOG("<br>Calculando saída da camada #"+s.l+"<br>");
+        }else  if(s.type == "ff_init"){
+            UI_addLOG("Preparando o primeiro paso (feedforward) <br>")
+        }else if(s.type == "ff"){    
             UI_tween_multiple(line,[
                 {..._style.line_ff.Self,..._style.line_ff._Tween},
                 {..._style.line.Self,..._style.line._Tween}
@@ -173,11 +182,14 @@ function UI_animate(step=0){
                           NN.layer[s.l].y_1.get([0,s.n1])          
                 
                 NN.layer[s.l].y_1.set([0,s.n1],res)
+                NN.layer[s.l+1].x_1.set([0,s.n1],res)    
                 
-                if(s.l != NN.Z){
-                    NN.layer[s.l+1].x_1.set([0,s.n1],10)    
-                }
+                UI_addLOG(""+
+                katex.renderToString(`~~~~Y_{${s.l},${s.n1}} += W_{${s.n0},${s.n1}} 
+                * X_{${s.l},${s.n0}}`)+
+                "<br>");
                 
+
 
                 s.visited = true
             }
@@ -187,12 +199,14 @@ function UI_animate(step=0){
                 {..._style.line_fb.Self,..._style.line_fb._Tween},
                 {..._style.line.Self,..._style.line._Tween}
             ],_ui.tweens_line[line._id])
-        }        
-        
+        }
+                
         UI_updateNodes(_ui)
         UI_renderEquations(_ui,s)
+        UI_setUI(_ui)
 
-        setTimeout(UI_animate,_style.time.dt_step,step+1)
+        if(continuios)
+            setTimeout(UI_animate,_style.time.dt_step,step+1,continuios)
     }
 }
 
@@ -207,47 +221,7 @@ function UI_updateNodes(_ui=_UI){
 }
 
 // item = [[1,1,'\\color{orange}','']]
-function matrix2Latex(M,fixed=-1,item){
-    var txt_in = ""
-    var m,n
-    
-    m = M._size[0]
-    n = M._size[1]
-    var to_add = ""
-    for(var f = 0 ; f < m ; f++){
-        for(var c = 0 ; c < n ; c++){
-            
-            to_add = ""
-            
-            if(fixed==-1){
-                to_add += M._data[f][c]
-            }else{
-                to_add += parseFloat(M._data[f][c]).toFixed(fixed)
-            }
 
-            if(item){
-                item.forEach((i)=>{
-                    if(i[0]==f && i[1]==c){
-                        to_add = `${i[2]}{${to_add}}${i[3]}`
-                    }else{
-                        to_add = `~~{${to_add}}~~`
-                    }
-                })
-            }
-
-            txt_in += to_add
-
-            if((c+1)!=n){
-                txt_in += "&"    
-            }
-        }
-        if((f+1)!=m){
-            txt_in += "\\\\"
-        }
-    }
-
-    return `\\begin{bmatrix}${txt_in}\\end{bmatrix}`
-}
 
 
 let _UI = UI_createUI()
@@ -255,4 +229,4 @@ GO_callback()
 
 NN = _nn.NN
 
-// UI_animate(0)
+// UI_animate(0,true)

@@ -1,15 +1,23 @@
 <!DOCTYPE html>
-<html>
-    <header>
-        <script src="../plugin/konva/konva.min.js"></script>
-        <script src="../plugin/math/math.js"></script>
-        <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.2/math.min.js" integrity="sha512-o7f74CDh7ECVuP3Rzk5Czgx5HDGc0gSoMGmgL3nDIgyn80AH+Py+TwPTsrhueuifiVdyTezC2lRuOeS2wkW6vg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
 
+<html lang='pt-br'>
+   <meta charset='UTF-8'>
+
+    <header>
+        <!-- Konva -->
+        <script src="../plugin/konva/konva.min.js"></script>
+
+        <!-- Math -->
+        <script src="../plugin/math/math.js"></script>
+
+        <!-- Bootstrap -->
+        <link rel="stylesheet" href="../plugin/bootstrap/dist/css/bootstrap.min.css">
+        <script dist src="../plugin/bootstrap/dist/js/bootstrap.bundle.js"></script>
+
+        <!-- Katex -->
         <link rel="stylesheet" href="../plugin/katex/katex.min.css">
         <script src="../plugin/katex/katex.min.js"></script>
         <script src="../plugin/katex/contrib/auto-render.min.js"></script>
-        <!-- <script src="../js/learNN_defs.js"></script> -->
-        <!-- <script defer src="../js/learNN.js"></script> -->
         
     </header>
 <body>
@@ -25,24 +33,45 @@
     <input type="button" value="GO" onclick="GO_callback()">
 </div>
 <div>
-    <input type="button" value="cls">
-    <input type="button" value="<">
-    <input type="button" value="Play" onclick="UI_animate(0)">
-    <input type="button" value=">">
-    Step <span>0</span> of <span>0</span>
+    <input id="btn_cls" type="button" value="cls">
+    <input id="btn_back" type="button" value="<">
+    <input id="btn_play" type="button" value="Play" onclick="UI_animate(0)">
+    <input id="btn_next" type="button" value=">">
+    Step <span id="n_step">0</span>
 </div>
 
 <div id="nn_render_container"></div>
 
-<div id="latex_container">
-    <span id="latex_1">...</span>
-    <br>
-    <br>
-    <span id="latex_2">...</span>
+
+<div class="container text-center">
+    <div class="row align-items-center">
+      <div class="col">
+        <span id="latex_1">...</span>
+      </div>
+      <div class="col">
+        <span id="latex_2">...</span>
+      </div>
+      <div class="col">
+        <span id="latex_3">...</span>
+      </div>
+    </div>
+  </div>
+
+<div id="container_LOG">
+    <span id="LOG">
+
+    </span>
 </div>
-
-
-  
+<style>
+    #container_LOG{
+        width: 500px;
+        height: 600px;
+        overflow-y: scroll;
+        position: fixed;
+        right: 0px;
+        top: 0px;        
+    }
+</style>
 <script src="../plugin/learnNN/learNN_defs.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", () => {
