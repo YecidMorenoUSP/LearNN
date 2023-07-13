@@ -10,10 +10,10 @@ _style = {
         "bg_btn":"black"
     },
     stage:{
-        // Self:{draggable:true},
-        // const:{scaleBy:1.2}
         Self:{draggable:false},
-        const:{scaleBy:0}
+        const:{scaleBy:0},
+        Self:{draggable:true},
+        const:{scaleBy:1.2},
     },
     width:{
         line:2,
@@ -27,8 +27,10 @@ _style = {
         nn_y:160,
     },
     time:{
-        dt_step: 500,
-        dt_all_step: 200,
+        dt_step: 500
+    },
+    neuron:{
+        draggable:true
     },
     line:{
         Self:{stroke: '#CCC',strokeWidth: 5},
@@ -57,6 +59,10 @@ _style = {
     layer_out:{
         Text:{fill:"#FFF"},
         Circle:{fill:"#FF414E",stroke:"black",strokeWidth:"2"}
+    },
+    latex_anim:{
+        ff:['\\color{green}  (',')'],
+        fb:['\\color{orange} (',')'],
     }
 }
 _nn = {
@@ -107,7 +113,7 @@ function UI_create_neuron(style){
         x: 0,
         y: 0,
         opacity: 1,
-        // draggable:true
+        draggable:_style.neuron.draggable
     });
 
     _node.add(new Konva.Circle({
@@ -127,7 +133,7 @@ function UI_create_neuron(style){
         verticalAlign:"middle",
         width:80,
         height:80,
-        fontSize:25
+        fontSize:22
     }))
  
     if(style!=undefined){
@@ -145,19 +151,13 @@ function UI_update_lines(_ui=_UI){
 
 function UI_update_nodes(_ui=_UI,NN=_nn.NN){
     let MaxNet = Math.max(...NN.ML_NN)
-    for(let idx=0 ; idx < NN.layer_in.n ; idx++){
-        var _node = NN.layer[0].net_in.get([0,idx])
-        
-        _node.x(_style.margin.origin_x+_style.margin.nn_x*0)
-        _node.y(_style.margin.origin_y+_style.margin.nn_y*idx+
-                (MaxNet-NN.layer_in.n)*_style.margin.nn_y/2)     
-    }
-    for(let l=0 ; l < NN.Z ; l++){
+
+    for(let l=0 ; l <= NN.Z ; l++){
         for(let idx=0 ; idx < NN.layer[l].n ; idx++){
 
             var _node = NN.layer[l].net_out.get([0,idx])
             
-            _node.x(_style.margin.origin_x+_style.margin.nn_x*(l+1))
+            _node.x(_style.margin.origin_x+_style.margin.nn_x*(l))
             _node.y(_style.margin.origin_y+_style.margin.nn_y*idx +
                     (MaxNet-NN.layer[l].n)*_style.margin.nn_y/2 )
     
@@ -172,24 +172,17 @@ function UI_drawNN(_ui=_UI,NN=_node.NN){
 
     var _group_nodes = new Konva.Group();
     
-    for(let idx=0 ; idx < NN.layer_in.n ; idx++){
-        var _node = UI_create_neuron(style=_style.layer_in)
-               
-        NN.layer[0].net_in.set([0,idx],_node)
-
-        _ui.nodes.push(_node)
-        _group_nodes.add(_node)
-    }
-    
-    for(let l=0 ; l < NN.Z ; l++){
+    for(let l=0 ; l <= NN.Z ; l++){
         for(let idx=0 ; idx < NN.layer[l].n ; idx++){
 
             var _node
 
-            if(l+1 != NN.Z){
-                _node = UI_create_neuron(style=_style.layer_hidden)                
-            }else{
+            if(l==0){
+                _node = UI_create_neuron(style=_style.layer_in)                
+            }else if(l==NN.Z){
                 _node = UI_create_neuron(style=_style.layer_out)
+            }else{
+                _node = UI_create_neuron(style=_style.layer_hidden)
             }
            
             _node.on("dragmove",()=>{
@@ -198,22 +191,20 @@ function UI_drawNN(_ui=_UI,NN=_node.NN){
 
             NN.layer[l].net_out.set([0,idx],_node)
 
-            if(l+1 != NN.Z){   
+            if(l != NN.Z){
                 NN.layer[l+1].net_in.set([0,idx],_node)
-            }else{
-                
-            }        
+            }
 
             _ui.nodes.push(_node)
             _group_nodes.add(_node)
         }
     }
-
+    
     var _group_lines = new Konva.Group();
     
     _ui.lines = []
 
-    for(let l=0 ; l < NN.Z ; l++){
+    for(let l=1 ; l <= NN.Z ; l++){
         for(let n=0 ; n < NN.layer[l].n ; n++){
             for(let m=0 ; m < NN.layer[l].m ; m++){
                 let n0 = NN.layer[l].net_in.get([0,m])
@@ -228,11 +219,13 @@ function UI_drawNN(_ui=_UI,NN=_node.NN){
 
                 line.on("mouseover",function(e){
                     UI_setStyle(e.currentTarget,_style.line_focus)
+                    UI_renderEquations(_ui,{n0:m,n1:n,l:l,type:'ff'})
                     console.log(NN.layer[data_line.l].W.get([m,n]))
                 })
 
                 line.on("mouseout",function(e){
                     UI_setStyle(e.currentTarget,_style.line)
+                    UI_renderEquations()
                 })
 
                 NN.layer[l].line.set([m,n],line)   
@@ -240,9 +233,7 @@ function UI_drawNN(_ui=_UI,NN=_node.NN){
                 _ui.lines.push(data_line)
             }
         }
-    }
-
-    
+    }    
 
     _ui.layer.add(_group_lines)
     _ui.layer.add(_group_nodes)
@@ -322,5 +313,45 @@ function UI_createUI(){
     _ui.layer = layer
 
     _ui.stage.add(_ui.layer)
+    UI_setUI(_ui)
     return _ui
+}
+
+function UI_setUI(_ui=_UI){
+    _ui.latex_1 = document.querySelector("#latex_1")
+    _ui.latex_2 = document.querySelector("#latex_2")
+}
+
+function UI_renderEquations(_ui=_UI,s){
+
+    latexW = ""
+    latexX = ""
+    latexY = ""
+    var style 
+    for(let i = 1 ; i <= NN.Z ; i++){
+        style = ""
+        if(s && s.l == i){
+            style = [[s.n0, s.n1,..._style.latex_anim[s.type]]]
+        }
+        latexW += `W^{${i}} = ` + matrix2Latex(NN.layer[i].W,3,style) + " ~ , ~ "
+        style = ""
+        if(s && s.l == i){
+            style = [[0, s.n0,..._style.latex_anim[s.type]]]
+        }
+        latexX += `X^{${i}} = ` + matrix2Latex(NN.layer[i].x_1,3,style) + " ~ , ~ "
+        style = ""
+        if(s && s.l == i){
+            style = [[0, s.n1,..._style.latex_anim[s.type]]]
+        }
+        latexY += `Y^{${i}} = ` + matrix2Latex(NN.layer[i].y_1,3,style) + " ~ , ~ "
+    }
+    // latexY += `Y^{out}` + matrix2Latex(NN.layer[NN.layer.length-1].y_1,3) + " ~ , ~ "
+
+    katex.render(latexW, _UI.latex_1, {
+        throwOnError: false
+    });
+
+    katex.render(latexX+"\\\\"+latexY, _UI.latex_2, {
+        throwOnError: false
+    });
 }
