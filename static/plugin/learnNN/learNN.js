@@ -90,11 +90,10 @@ class NeuronalNetwork{
 
 function NN_make_steps(_nn){
 
+    _nn.step_cur = 0
     _nn.steps = []
     NN = _nn.NN
    
-    _nn.step_cur = 0
-
     _nn.steps.push({l:0,n0:0,n1:0,type:"_init",visited:false})
 
     _nn.steps.push({l:0,n0:0,n1:0,type:"ff_init",visited:false})
@@ -140,22 +139,57 @@ function runLine(l){
 }
 
 function UI_animate(step=0,continuios=false){
+    // console.log("UI_animate")
+    if(step<=0) step = 0
+
     _ui = _UI
     NN = _nn.NN
     _nn.step_cur = step
 
     if(step>=0 && step<_nn.steps.length){
         var s = _nn.steps[step];
-        // console.log(s)
-        let line = undefined
         
+                
+        if(!s.visited){
+            if(s.type == "_init"){
+
+            }else if(s.type == "ff_layer"){
+                UI_addLOG("<br>Calculando saída da camada #"+s.l+"<br>");
+            }else  if(s.type == "ff_init"){
+                UI_addLOG("Preparando o primeiro paso (feedforward) <br>")
+            }else if(s.type == "ff"){    
+              
+                var res = NN.layer[s.l].W.get([s.n0,s.n1])*
+                            NN.layer[s.l-1].x_1.get([0,s.n0]) + 
+                            NN.layer[s.l].y_1.get([0,s.n1])            
+                
+                UI_addLOG(""+
+                katex.renderToString(`~~~~Y_{${s.l},${s.n1}} += W_{${s.n0},${s.n1}} 
+                * X_{${s.l},${s.n0}}~:~
+                ${NN.layer[s.l].y_1.get([0,s.n1]).toFixed(2)} + 
+                ${NN.layer[s.l].W.get([s.n0,s.n1]).toFixed(2)} *
+                ${NN.layer[s.l-1].x_1.get([0,s.n0]).toFixed(2)}:
+                ${res.toFixed(2)}`)+
+                "<br>");
+
+                NN.layer[s.l].y_1.set([0,s.n1],res)
+                NN.layer[s.l+1].x_1.set([0,s.n1],res)  
+
+                
+            }else if(s.type == "fb"){
+
+            }
+            s.visited = true;
+        }
+        
+        let line = undefined
         if(s.type == "ff" || s.type == "fb"){
             line = NN.layer[s.l].line.get([s.n0,s.n1])
             _ui.tweens_line[line._id].forEach((t)=>{
                 t.destroy()
             })
         }
-        
+
         if(s.type == "_init"){
             UI_addLOG()
             NN_make_steps(_nn)
@@ -166,47 +200,32 @@ function UI_animate(step=0,continuios=false){
             +"<br><br>");
             NN.predict(math.matrix(_nn.x0))
         }else if(s.type == "ff_layer"){
-            UI_addLOG("<br>Calculando saída da camada #"+s.l+"<br>");
+            
         }else  if(s.type == "ff_init"){
-            UI_addLOG("Preparando o primeiro paso (feedforward) <br>")
+
         }else if(s.type == "ff"){    
             UI_tween_multiple(line,[
                 {..._style.line_ff.Self,..._style.line_ff._Tween},
                 {..._style.line.Self,..._style.line._Tween}
-            ],_ui.tweens_line[line._id])
-            
-            if(!s.visited){
-
-                var res = NN.layer[s.l].W.get([s.n0,s.n1])*
-                          NN.layer[s.l-1].x_1.get([0,s.n0]) + 
-                          NN.layer[s.l].y_1.get([0,s.n1])          
-                
-                NN.layer[s.l].y_1.set([0,s.n1],res)
-                NN.layer[s.l+1].x_1.set([0,s.n1],res)    
-                
-                UI_addLOG(""+
-                katex.renderToString(`~~~~Y_{${s.l},${s.n1}} += W_{${s.n0},${s.n1}} 
-                * X_{${s.l},${s.n0}}`)+
-                "<br>");
-                
-
-
-                s.visited = true
-            }
-            
+            ],_ui.tweens_line[line._id])            
         }else if(s.type == "fb"){
             UI_tween_multiple(line,[
                 {..._style.line_fb.Self,..._style.line_fb._Tween},
                 {..._style.line.Self,..._style.line._Tween}
             ],_ui.tweens_line[line._id])
         }
+      
+
+       
                 
         UI_updateNodes(_ui)
         UI_renderEquations(_ui,s)
         UI_setUI(_ui)
 
-        if(continuios)
+        if(continuios && _nn.running == true)
             setTimeout(UI_animate,_style.time.dt_step,step+1,continuios)
+    }else{
+        _nn.running = false
     }
 }
 

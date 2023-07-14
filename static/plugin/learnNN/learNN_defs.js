@@ -37,7 +37,7 @@ _style = {
         _Tween:{duration: .5},
     },
     line_focus:{
-        Self:{stroke: '#000',strokeWidth: 8},
+        Self:{stroke: '#607D8B',strokeWidth: 8},
         _Tween:{duration: .5}
     },
     line_ff:{
@@ -50,25 +50,27 @@ _style = {
     },
     layer_in:{
         Text:{fill:"#FFF"},
-        Circle:{fill:"#FFA400",stroke:"#CCC",strokeWidth:"2"},
+        Circle:{fill:"#FFA400",stroke:"#FFF",strokeWidth:"6"},
     },
     layer_hidden:{
         Text:{fill:"#FFF"},
-        Circle:{fill:"#80BC00",stroke:"#CCC",strokeWidth:"2"},
+        Circle:{fill:"#80BC00",stroke:"#FFF",strokeWidth:"6"},
     },
     layer_out:{
         Text:{fill:"#FFF"},
-        Circle:{fill:"#FF414E",stroke:"#CCC",strokeWidth:"2"},
+        Circle:{fill:"#FF414E",stroke:"#FFF",strokeWidth:"6"},
     },
     latex_anim:{
         ff:['\\color{green}  (',')'],
         fb:['\\color{orange} (',')'],
-        ff_layer:[]
+        ff_layer:['','']
     }
 }
 _nn = {
     vec_in : [3,2,2,1],
-    x0: [1,2,3]
+    x0: [1,2,3],
+    step_cur:-1,
+    running: false,
 }
 
 _events = {}
@@ -253,7 +255,7 @@ function UI_drawNN(_ui=_UI,NN=_node.NN){
 
 function UI_createUI(){
     _ui = {}
-    
+        
     var stage = new Konva.Stage({
         container: 'nn_render_container',
         width: window.innerWidth*.99, 
@@ -323,39 +325,62 @@ function UI_getUI(_ui=_UI){
     _ui.latex_3 = document.querySelector("#latex_3")
     _ui.n_step = document.querySelector("#n_step")
     _ui.LOG = document.querySelector("#LOG")
-    document.querySelector("#btn_cls").onclick = ()=>{
+    _ui.btn_LOG = document.querySelector("#btn_LOG")
+    _ui.container_LOG = document.querySelector("#container_LOG")
+
+    _ui.container_LOG.style.width = "0px"
+
+    _ui.btn_LOG.onclick = function(){
+        if(_ui.container_LOG.style.width == "0px" ||
+           _ui.container_LOG.style.width == ''){
+            _ui.container_LOG.style.width = "40em";
+        }else{
+            _ui.container_LOG.style.width = "0px";
+        }
+    }
+
+    _ui.btn_cls = document.querySelector("#btn_cls")
+    _ui.btn_cls.onclick = ()=>{
         UI_animate(0)
     }
-    document.querySelector("#btn_next").onclick = ()=>{
-        UI_animate(_nn.step_cur+1)
+    _ui.btn_play = document.querySelector("#btn_play")
+    _ui.btn_play.onclick = ()=>{
+        _nn.running = !_nn.running;
+        UI_animate(_nn.step_cur+1,true)
     }
-    document.querySelector("#btn_back").onclick = ()=>{
+    _ui.btn_next = document.querySelector("#btn_next")
+    _ui.btn_next.onclick = ()=>{
+        UI_animate( _nn.step_cur+1)
+    }
+    _ui.btn_back = document.querySelector("#btn_back")
+    _ui.btn_back.onclick = ()=>{
         UI_animate(_nn.step_cur-1)
     }
 }
 
 function UI_setUI(_ui=_UI){
     _ui.n_step.innerHTML = _nn.step_cur+" of "+(_nn.steps.length-1)
+
+    
 }
 
 function UI_renderEquations(_ui=_UI,s){
-
     latexW = ""
     latexX = ""
     latexY = ""
     var style 
     for(let i = 1 ; i <= NN.Z ; i++){
-        style = ""
+        style = []
         if(s && s.l == i){
             style = [[s.n0, s.n1,..._style.latex_anim[s.type]]]
         }
         latexW += `W^{${i}} = ` + matrix2Latex(NN.layer[i].W,3,style) + " ~ , ~ "
-        style = ""
+        style = []
         if(s && s.l == i){
             style = [[0, s.n0,..._style.latex_anim[s.type]]]
         }
         latexX += `X^{${i}} = ` + matrix2Latex(NN.layer[i].x_1,3,style) + " ~ , ~ "
-        style = ""
+        style = []
         if(s && s.l == i){
             style = [[0, s.n1,..._style.latex_anim[s.type]]]
         }
@@ -365,13 +390,13 @@ function UI_renderEquations(_ui=_UI,s){
         latexX += "\\\\"
         latexY += "\\\\"
     }
-    // latexY += `Y^{out}` + matrix2Latex(NN.layer[NN.layer.length-1].y_1,3) + " ~ , ~ "
 
-    katex.render(latexW, _UI.latex_1, {
+
+    katex.render(latexX, _UI.latex_1, {
         throwOnError: false
     });
 
-    katex.render(latexX, _UI.latex_2, {
+    katex.render(latexW, _UI.latex_2, {
         throwOnError: false
     });
 
@@ -399,8 +424,14 @@ function UI_tween_multiple(node,style=[],save=[],idx=0){
     
 }
 
-function UI_addLOG(txt=undefined){
-    if(txt) _ui.LOG.innerHTML += txt;
+function UI_addLOG(txt=undefined,id){
+    if(txt){
+        if(id){
+            _ui.LOG.innerHTML += `<div id='${id}'>`+txt+"</div>";
+        }else{
+            _ui.LOG.innerHTML +=txt;
+        }
+    }
     else _ui.LOG.innerHTML = ""
 }
 
@@ -411,7 +442,6 @@ function UI_addLOG(txt=undefined){
 function matrix2Latex(M,fixed=-1,item=[]){
     var txt_in = ""
     var m,n
-    
     m = M._size[0]
     n = M._size[1]
     var to_add = ""
@@ -449,3 +479,39 @@ function matrix2Latex(M,fixed=-1,item=[]){
 
     return `\\begin{bmatrix}${txt_in}\\end{bmatrix}`
 }
+
+//#####################################
+//            Events
+//#####################################
+
+_nn = new Proxy(_nn, {
+    set: function (target, key, value) {
+        if(key == 'step_cur'){
+            if(target.steps!=undefined){
+                if(value<=-1){
+                    value = -1
+                }else if(value>=target.steps.length){
+                    value = target.steps.length - 1
+                }                    
+            }else{
+                value = -1
+            }    
+            target[key] = value
+        }
+        
+        else if(key == 'running'){
+            if(value==true)
+                _ui.btn_play.value = "Stop"
+                else
+                _ui.btn_play.value = "Play"
+
+            target[key] = value
+        }
+        
+        else{
+            target[key] = value
+        }
+
+        
+    }
+});

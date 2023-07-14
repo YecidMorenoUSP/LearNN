@@ -39,6 +39,9 @@
     <input id="btn_next" type="button" value=">">
     Step <span id="n_step">0</span>
 </div>
+<div>
+  <input type="button" value="LOG" id="btn_LOG">
+</div>
 
 <div id="nn_render_container"></div>
 
@@ -57,7 +60,7 @@
     </div>
   </div>
 
-<div id="container_LOG">
+<div id="container_LOG" class="sidenavR">
     <span id="LOG">
 
     </span>
@@ -65,12 +68,16 @@
 <style>
     #container_LOG{
         width: 500px;
-        height: 600px;
+        height: 100%;
         overflow-y: scroll;
+        overflow-x: scroll;
         position: fixed;
         right: 0px;
-        top: 0px;        
+        top: 0px;      
+        transition:.5s;  
+        background-color: white;
     }
+
 </style>
 <script src="../plugin/learnNN/learNN_defs.js"></script>
 <script>
